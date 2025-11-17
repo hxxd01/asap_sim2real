@@ -1,0 +1,196 @@
+# ATOM Robot MuJoCo Sim2Sim Configuration
+# 适配自 G1 配置，针对 ATOM 27-DOF 人形机器人
+
+# ========================================
+# Policy & Motion 配置
+# ========================================
+# /home/dobot/Desktop/extracted_files/logs/MotionTracking/test_best2/exported/model_11000.onnx
+#/home/dobot/Desktop/extracted_files/logs/MotionTracking/2.5feet/3.0extend/exported/model_70000.onnx
+
+#挥手：/home/dobot/Desktop/extracted_files/logs/MotionTracking/gesture_new/exported/model_40000.onnx
+#单跨步 /home/dobot/Desktop/extracted_files/logs/MotionTracking/one_step/exported/model_22000.onnx
+policy_path: "/home/dobot/Desktop/extracted_files/logs/MotionTracking/gesture_new/exported/model_40000.onnx"  # TODO: 替换为实际的 ATOM ONNX 模型路径
+cycle_time: 4.8  # 动作周期时间（秒），根据实际运动调整
+#挥手4.8
+#跨步5.333
+xml_path: "atom_urdf/atom_v3.xml"
+#xml_path: "/home/dobot/Desktop/extracted_files/asap_mujoco_sim/atom_urdf/atom_retarget.xml"
+
+
+# ========================================
+# Simulation 基础配置
+# ========================================
+render: True # 是否显示可视化窗口
+simulation_dt: 0.001  # 仿真时间步长 (5ms)
+simulation_duration: 20  # 单次仿真持续时间（秒）
+control_decimation: 20  # 控制抽取率：每4个仿真步执行1次控制 → 50Hz控制频率
+frame_stack: 4  # 历史帧堆叠数量
+log_torque: false  # 是否记录并导出全程关节力矩（CSV/PNG）
+
+# Episode 配置
+episode_steps: 266  # 每个 episode 的步数：7秒 / (0.005*4) = 350步
+total_steps: 10000  # 总采集步数：200个完整回合
+
+# ========================================
+# Observation 配置
+# ========================================
+num_single_obs: 88  # 单帧观测维度：27(action) + 3(ang_vel) + 27(dof_pos) + 27(dof_vel) + 3(gravity) + 1(phase) = 88
+                    # 完整观测维度：440 = 单帧(88) + 历史(352)
+                    # 历史维度：(27+3+27+27+3+1)*4 = 352
+
+use_noise: true  # 是否添加观测噪声（
+
+# Observation scales
+obs_scale_base_ang_vel: 0.25
+obs_scale_dof_pos: 1.0
+obs_scale_dof_vel: 0.05
+obs_scale_gvec: 1.0
+obs_scale_refmotion: 1.0
+obs_scale_hist: 1.0
+
+# ========================================
+# Action & Control 配置
+# ========================================
+num_actions: 27  # ATOM 有 27 个自由度
+clip_observations: 100.0
+clip_actions: 100.0
+
+
+action_scale: [
+      # 左腿 (6 DOF)
+      #0.1627,  # 0: left_hip_pitch_joint
+      0.2416,  # 0: left_hip_pitch_joint
+      0.2762,  # 1: left_hip_roll_joint
+      0.2416,  # 2: left_hip_yaw_joint
+      #0.2805,  # 3: left_knee_joint
+      0.4205,  # 3: left_knee_joint
+      0.5359,  # 4: left_ankle_pitch_joint
+      0.5359,  # 5: left_ankle_roll_joint
+
+      # 右腿 (6 DOF)
+      #0.1627,  # 6: right_hip_pitch_joint
+      0.2416,  # 6: right_hip_pitch_joint
+      0.2762,  # 7: right_hip_roll_joint
+      0.2416,  # 8: right_hip_yaw_joint
+      #0.2805,  # 9: right_knee_joint
+      0.4205,  # 9: right_knee_joint
+      0.5359,  # 10: right_ankle_pitch_joint
+      0.5359,  # 11: right_ankle_roll_joint
+
+      # 腰部 (1 DOF)
+      0.1409,  # 12: waist_yaw_joint
+
+      # 左臂 (7 DOF)
+      0.1750,  # 13: left_shoulder_pitch_joint
+      0.1125,  # 14: left_shoulder_roll_joint
+      0.1125,  # 15: left_shoulder_yaw_joint
+      0.1500,  # 16: left_elbow_pitch_joint
+      0.0775,  # 17: left_elbow_roll_joint
+      0.0581,  # 18: left_wrist_pitch_joint
+      0.0581,  # 19: left_wrist_yaw_joint
+
+      # 右臂 (7 DOF)
+      0.1750,  # 20: right_shoulder_pitch_joint
+      0.1125,  # 21: right_shoulder_roll_joint
+      0.1125,  # 22: right_shoulder_yaw_joint
+      0.1500,  # 23: right_elbow_pitch_joint
+      0.0775,  # 24: right_elbow_roll_joint
+      0.0581,  # 25: right_wrist_pitch_joint
+      0.0581   # 26: right_wrist_yaw_joint
+    ]
+
+# ========================================
+# 初始姿态配置（27 DOF，按顺序）
+# ========================================
+# 顺序：左腿6 + 右腿6 + 腰1 + 左臂7 + 右臂7
+default_dof_pos: [
+    # 左腿 6：hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    # 右腿 6
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    # 腰 1：waist_yaw
+    0.0,
+    # 左臂 7：shoulder_pitch, shoulder_roll, shoulder_yaw, elbow_pitch, elbow_roll, wrist_pitch, wrist_yaw
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    # 右臂 7
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+]
+
+init_pos: [
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+]
+
+# ========================================
+# PD 控制参数（基于 atom.yaml 的配置）
+# ========================================
+# 顺序：左腿6 + 右腿6 + 腰1 + 左臂7 + 右臂7
+kps: [
+    # 左腿 6: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+    430.24, 278.81, 144.89, 320.80, 60.64, 60.64,
+    # 右腿 6
+    430.24, 278.81, 144.89, 320.80, 60.64, 60.64,
+    # 腰 1: waist_yaw
+    #443.71,
+    320,
+    # 左臂 7: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow_pitch, elbow_roll, wrist_pitch, wrist_yaw
+    80, 80, 80, 60, 60, 80, 80,
+    # 右臂 7
+    80, 80, 80, 60, 60, 80, 80
+]
+
+kds: [
+    # 左腿 6: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+    27.39, 17.75, 9.22, 20.42, 3.86, 3.86,
+    # 右腿 6
+    27.39, 17.75, 9.22, 20.42, 3.86, 3.86,
+    # 腰 1: waist_yaw
+    #28.24,
+    32,
+    # 左臂 7: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow_pitch, elbow_roll, wrist_pitch, wrist_yaw
+    2, 2, 2, 0.5, 0.5, 0.5, 0.5,
+    # 右臂 7
+    2, 2, 2, 0.5, 0.5, 0.5, 0.5
+]
+
+# ========================================
+# 关节力矩限制（基于 atom.yaml effort limits）
+# ========================================
+tau_limit: [
+    # 左腿 6
+    280.0, 308.0, 140.0, 360.0, 130.0, 130.0,
+    # 右腿 6
+    280.0, 308.0, 140.0, 360.0, 130.0, 130.0,
+    # 腰 1
+    250.0,
+    # 左臂 7
+    56.0, 36.0, 36.0, 36.0, 18.6, 18.6, 18.6,
+    # 右臂 7
+    56.0, 36.0, 36.0, 36.0, 18.6, 18.6, 18.6
+]
+
+
+
+# ========================================
+# Termination 配置（早停机制）
+# ========================================
+use_termination: True  # 启用 termination 检测
+
+# 重力投影 termination（检测摔倒）
+termination_gravity_x: 0.8  # x方向重力投影阈值（~31.8度倾斜）
+termination_gravity_y: 0.8  # y方向重力投影阈值
+
+# 可选的其他 termination 条件（当前未启用）
+# termination_min_height: 0.3  # 最小基座高度（米）
+# termination_max_torque_ratio: 0.95  # 扭矩比例上限
+
+# ========================================
+# 数据处理配置
+# ========================================
+auto_process: True  # 采集完成后自动处理数据
+min_episode_length: 40  # 最小有效 episode 长度（步数）
+                        # 低于此长度的 episode 会被过滤掉
+

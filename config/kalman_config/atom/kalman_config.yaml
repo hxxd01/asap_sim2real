@@ -1,0 +1,32 @@
+atom:
+  generalizedCoordinatesNum: 18
+  actuatedDofNum: 12
+  joint_names: [left_hip_pitch_joint, left_hip_roll_joint, left_hip_yaw_joint, left_knee_joint, left_ankle_pitch_joint, left_ankle_roll_joint,
+                right_hip_pitch_joint, right_hip_roll_joint, right_hip_yaw_joint, right_knee_joint, right_ankle_pitch_joint, right_ankle_roll_joint]
+  foot_names: [left_foot_front_link, right_foot_front_link, left_foot_hind_link, right_foot_hind_link]
+
+  footRadius:                  0.005
+  imuProcessNoisePosition:     0.04
+  imuProcessNoiseVelocity:     0.02
+  footProcessNoisePosition:    0.02
+  footSensorNoisePosition:     0.02
+  footSensorNoiseVelocity:     10.0
+  footHeightSensorNoise:       0.01
+  cutoff_frequency: 150.0
+  contact_threshold: 250.0
+
+    #   footRadius                  -0.01
+    # imuProcessNoisePosition     0.04 ; 越大，越不相信IMU，但是给大会振荡
+    # imuProcessNoiseVelocity     0.02
+    # footProcessNoisePosition    0.001
+    # footSensorNoisePosition     0.001
+    # footSensorNoiseVelocity     10.0
+    # footHeightSensorNoise       0.01
+
+  # footRadius:                  0.005
+  # imuProcessNoisePosition:     0.02
+  # imuProcessNoiseVelocity:     0.02
+  # footProcessNoisePosition:    0.002
+  # footSensorNoisePosition:     0.005
+  # footSensorNoiseVelocity:     0.1
+  # footHeightSensorNoise:       0.01
