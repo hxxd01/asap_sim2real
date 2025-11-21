@@ -56,9 +56,6 @@ RL_Real::RL_Real()
     this->loop_plot = std::make_shared<LoopFunc>("loop_plot", 0.002, std::bind(&RL_Real::Plot, this));
     this->loop_plot->start();
 #endif
-#ifdef CSV_LOGGER
-    this->CSVInit(this->robot_name);
-#endif
     EstimationCSVInit(this->robot_name);
 
 }
@@ -135,20 +132,26 @@ void RL_Real::EstimationCSVInit(std::string robot_path)
 void RL_Real::ComputeObservation()
 {
     auto proprioObs = this->active_model->compute_observation(this->params, this->robot_state, this->control, this->obs);
-    
+    // 打印关键维度
+    std::cout << "[DEBUG] proprioObs.size()=" << proprioObs.size() << std::endl;
+    std::cout << "[DEBUG] obs_history_buffer.size()=" << this->obs_history_buffer.size() << std::endl;
+    std::cout << "[DEBUG] num_one_step_observations=" << this->params.num_one_step_observations << std::endl;
+    std::cout << "[DEBUG] num_history=" << this->params.num_history << std::endl;
+    std::cout << "[DEBUG] obs.observations.size()=" << this->obs.observations.size() << std::endl;
+
     // Update history buffer - move old data back, add new data at head
     this->obs_history_buffer.tail(this->obs_history_buffer.size() - this->params.num_one_step_observations) =
         this->obs_history_buffer.head(this->obs_history_buffer.size() - this->params.num_one_step_observations);
     this->obs_history_buffer.head(this->params.num_one_step_observations) = proprioObs;
 
     int idx = 0;
-    const int num_history = 4;
-    
+    const int num_history = this->params.num_history;  // Use config value instead of hardcoded 4
+
     // Current frame observations (84 elements)
     for (int i = 0; i < 84; i++) {
         this->obs.observations[idx++] = static_cast<tensor_element_t>(proprioObs[i]);
     }
-    
+
     // History: DOF positions (27 * 4)
     for (int t = 1; t <= num_history; t++) {
         int frame_offset = t * this->params.num_one_step_observations;
@@ -156,7 +159,7 @@ void RL_Real::ComputeObservation()
             this->obs.observations[idx++] = static_cast<tensor_element_t>(this->obs_history_buffer[frame_offset + i]);
         }
     }
-    
+
     // History: DOF velocities (3 * 4)
     for (int t = 1; t <= num_history; t++) {
         int frame_offset = t * this->params.num_one_step_observations;
@@ -164,7 +167,7 @@ void RL_Real::ComputeObservation()
             this->obs.observations[idx++] = static_cast<tensor_element_t>(this->obs_history_buffer[frame_offset + i]);
         }
     }
-    
+
     // History: Gravity and other obs (27 * 4)
     for (int t = 1; t <= num_history; t++) {
         int frame_offset = t * this->params.num_one_step_observations;
@@ -172,7 +175,7 @@ void RL_Real::ComputeObservation()
             this->obs.observations[idx++] = static_cast<tensor_element_t>(this->obs_history_buffer[frame_offset + i]);
         }
     }
-    
+
     // History: More observations (27 * 4)
     for (int t = 1; t <= num_history; t++) {
         int frame_offset = t * this->params.num_one_step_observations;
@@ -180,7 +183,7 @@ void RL_Real::ComputeObservation()
             this->obs.observations[idx++] = static_cast<tensor_element_t>(this->obs_history_buffer[frame_offset + i]);
         }
     }
-    
+
     // History: IMU info (3 * 4)
     for (int t = 1; t <= num_history; t++) {
         int frame_offset = t * this->params.num_one_step_observations;
@@ -188,18 +191,18 @@ void RL_Real::ComputeObservation()
             this->obs.observations[idx++] = static_cast<tensor_element_t>(this->obs_history_buffer[frame_offset + i]);
         }
     }
-    
+
     // History: Motion phase (1 * 4)
     for (int t = 1; t <= num_history; t++) {
         int frame_offset = t * this->params.num_one_step_observations;
         this->obs.observations[idx++] = static_cast<tensor_element_t>(this->obs_history_buffer[frame_offset + 87]);
     }
-    
+
     // Current frame additional info (4)
     for (int i = 84; i < 88; i++) {
         this->obs.observations[idx++] = static_cast<tensor_element_t>(proprioObs[i]);
     }
-    
+
     // Limit observation range
     scalar_t obsMin = -this->params.clip_obs;
     scalar_t obsMax = this->params.clip_obs;
@@ -232,7 +235,30 @@ void RL_Real::GetState(RobotState<double> *state)
         }
     }
 
+    if (remote_tmp_ptr->button_START_ && !this->log_data)
+    {
+        if (!this->rl_init_done || this->params.num_of_policy_dofs <= 0)
+        {
+            std::cout << std::endl << LOGGER::WARNING
+                      << "Cannot enable logging: RL model not initialized yet." << std::endl;
+        }
+        else
+        {
+            this->CSVInit(this->robot_name);
+            this->log_data = true;
+            this->auto_log_pending = false;
+            std::cout << std::endl << LOGGER::INFO << "Data logging ENABLED (500Hz) - Press L2 to stop" << std::endl;
+        }
+    }
+    if (remote_tmp_ptr->button_L2_ && this->log_data)
+    {
+        this->log_data = false;
+        std::cout << std::endl << LOGGER::INFO << "Data logging DISABLED" << std::endl;
+    }
+
     if (remote_tmp_ptr->button_R1U_) this->control.SetGamepad(Input::Gamepad::RB_DPadUp);  // r1+up进入模型
+
+    if (remote_tmp_ptr->button_R1L_) this->control.SetGamepad(Input::Gamepad::RB_DPadLeft);  // r1+down进入站立
 
     this->control.x = remote_tmp_ptr->lin_vel[0] * 1.0;
     this->control.y = remote_tmp_ptr->lin_vel[1] * 0.0;
@@ -245,12 +271,15 @@ void RL_Real::GetState(RobotState<double> *state)
 
     for (int i = 0; i < 3; ++i) { state->imu.gyroscope[i] = base_state_ptr->w[i]; }
 
+    // Leg joints (12 joints: indices 0-11)
     for (int i = 0; i < 12; ++i) {
         state->motor_state.q[i] = js_tmp_ptr->q[i];
         state->motor_state.dq[i] = js_tmp_ptr->dq[i];
         state->motor_state.tau_est[i] = js_tmp_ptr->tau[i];
     }
 
+    // Arm joints (17 joints: indices 12-28)
+    // Note: Policy controls 15 arm joints (12-26), head joints (27-28) are handled separately
     for (int i = 0; i < 17; ++i) {
         state->motor_state.q[i + 12] = ajs_tmp_ptr->q[i];
         state->motor_state.dq[i + 12] = ajs_tmp_ptr->dq[i];
@@ -260,6 +289,7 @@ void RL_Real::GetState(RobotState<double> *state)
 
 void RL_Real::SetCommand(const RobotCommand<double> *command, const RobotState<double> *state)
 {
+    // Send leg commands (12 joints: indices 0-11)
     for (int i = 0; i < 12; ++i) {
         // this->leg_command.q_ref[i] = (command->motor_command.q[i] - baseMotor_[i]);
         this->leg_command.q_ref[i] = (command->motor_command.q[i]);
@@ -267,17 +297,44 @@ void RL_Real::SetCommand(const RobotCommand<double> *command, const RobotState<d
         this->leg_command.dq_ref[i] = command->motor_command.dq[i];
         this->leg_command.kp[i] = command->motor_command.kp[i];
         this->leg_command.kd[i] = command->motor_command.kd[i];
-        this->leg_command.tau_forward[i] = command->motor_command.tau[i];
+        
+        // Clip torque to limits
+        double tau = command->motor_command.tau[i];
+        double tau_limit = this->params.torque_limits[i];
+        if (tau > tau_limit) tau = tau_limit;
+        if (tau < -tau_limit) tau = -tau_limit;
+        this->leg_command.tau_forward[i] = tau;
     }
 
-    for (int i = 12; i < 29; ++i) {
+    // Send arm commands (15 joints controlled by policy: indices 12-26)
+    // Note: Policy controls 27 DOFs total (12 legs + 15 upper body)
+    // Real robot has 17 arm joints, but policy only controls 15
+    for (int i = 12; i < this->params.num_of_dofs; ++i) {
         // this->arm_command.q_ref[i - 12] = (command->motor_command.q[i] - baseMotor_[i - 1]);
         this->arm_command.q_ref[i - 12] = (command->motor_command.q[i]);
         this->arm_command.dq_ref[i - 12] = command->motor_command.dq[i];
         this->arm_command.kp[i - 12] = command->motor_command.kp[i];
         this->arm_command.kd[i - 12] = command->motor_command.kd[i];
-        this->arm_command.tau_forward[i - 12] = command->motor_command.tau[i];
+        
+        // Clip torque to limits
+        double tau = command->motor_command.tau[i];
+        double tau_limit = this->params.torque_limits[i];
+        if (tau > tau_limit) tau = tau_limit;
+        if (tau < -tau_limit) tau = -tau_limit;
+        this->arm_command.tau_forward[i - 12] = tau;
     }
+    
+    // Fill head joints (indices 15-16 in ArmCommand, corresponding to real joints 27-28)
+    // Keep head stable at current position with moderate stiffness
+    const int head_start_idx = 15;  // ArmCommand[15] = HeadPitch, [16] = HeadRoll
+    for (int i = 0; i < 2; ++i) {
+        this->arm_command.q_ref[head_start_idx + i] = 0.0;  // Keep current position
+        this->arm_command.dq_ref[head_start_idx + i] = 0.0;
+        this->arm_command.kp[head_start_idx + i] = 50.0;  // Moderate stiffness
+        this->arm_command.kd[head_start_idx + i] = 2.0;
+        this->arm_command.tau_forward[head_start_idx + i] = 0.0;
+    }
+    
     int fsm_id = 2;
     bridge.SetNewestFsmCommand(fsm_id);
     bridge.SetNewestLegCommand(this->leg_command);
@@ -307,6 +364,35 @@ void RL_Real::InitializeArmPosition()
 
 void RL_Real::RobotControl()
 {
+    // Reset logic (R key or RB+Y gamepad)
+    if (this->control.current_keyboard == Input::Keyboard::R || this->control.current_gamepad == Input::Gamepad::RB_Y)
+    {
+        std::cout << "\n🔄 [Reset Request] Resetting observation buffers and model state..." << std::endl;
+        
+        // Reset observation buffers
+        this->obs.actions.setZero();
+        this->obs_history_buffer.setZero();
+        
+        // Reset active model (counter_step and motion_phase)
+        if (this->active_model) {
+            this->active_model->reset();
+            std::cout << "   ✅ Model reset complete (counter_step=0, motion_phase=0)" << std::endl;
+        } else {
+            std::cout << "   ⚠️  active_model is nullptr (not in RL state)" << std::endl;
+        }
+        
+        std::cout << "   📊 Current robot state:" << std::endl;
+        std::cout << "      Quat(w,x,y,z): [" << this->robot_state.imu.quaternion[0] << ", " 
+                  << this->robot_state.imu.quaternion[1] << ", " 
+                  << this->robot_state.imu.quaternion[2] << ", " 
+                  << this->robot_state.imu.quaternion[3] << "]" << std::endl;
+        std::cout << "      Joint[0:3]: [" << this->robot_state.motor_state.q[0] << ", " 
+                  << this->robot_state.motor_state.q[1] << ", " 
+                  << this->robot_state.motor_state.q[2] << "]" << std::endl;
+        
+        this->control.current_keyboard = this->control.last_keyboard;
+    }
+    
     this->motiontime++;
 
     if (this->control.current_keyboard == Input::Keyboard::W) {
@@ -356,6 +442,24 @@ void RL_Real::RobotControl()
         this->control.current_keyboard = this->control.last_keyboard;
     }
 
+    bool rl_just_started = this->rl_init_done && !this->prev_rl_init_done;
+    bool rl_just_stopped = !this->rl_init_done && this->prev_rl_init_done;
+    this->prev_rl_init_done = this->rl_init_done;
+
+    if (rl_just_started)
+    {
+        this->auto_log_pending = true;
+    }
+    if (rl_just_stopped)
+    {
+        this->auto_log_pending = false;
+        if (this->log_data)
+        {
+            this->log_data = false;
+            std::cout << std::endl << LOGGER::INFO << "RL exited - Data logging DISABLED" << std::endl;
+        }
+    }
+
     // if (this->control.current_keyboard == Input::Keyboard::N || this->control.current_gamepad == Input::Gamepad::X)
     // {
     //     this->control.navigation_mode = !this->control.navigation_mode;
@@ -364,73 +468,67 @@ void RL_Real::RobotControl()
     // }
 
     this->GetState(&this->robot_state);
-    // for (size_t i = 0; i < 12; i++)
-    // {
-    //     std::cout << "second motor_state.q[" << i << "] = " << this->robot_state.motor_state.q[i] << std::endl;
-    //     std::cout << "second motor_state.dq[" << i << "] = " << this->robot_state.motor_state.dq[i] << std::endl;
-    //     std::cout << "second motor_state.tau_est[" << i << "] = " << this->robot_state.motor_state.tau_est[i] << std::endl;
-    //     std::cout << "upper motor_state.q[" << i << "] = " << this->robot_state.motor_state.q[i+12] << std::endl;
-    //     std::cout << "upper motor_state.dq[" << i << "] = " << this->robot_state.motor_state.dq[i+12] << std::endl;
-    //     std::cout << "upper motor_state.tau_est[" << i << "] = " << this->robot_state.motor_state.tau_est[i+12] << std::endl;
-    // }
-#if KALMAN_FILTER
+    
+    // Log data at 500Hz (every 2 control cycles at 1000Hz)
+    if(this->log_data && this->rl_init_done) {
 
-        if(this->rl_init_done){
-                auto desired_contact = this->active_model->get_contact_state();
-
-                // this->state_estimator.updateContact(desired_contact);
-                this->est_robot_state = this->state_estimator.Update(this->params.dt, &this->robot_state);
-                auto est_contact_force = this->state_estimator.getEstContactForce();
-
-            std::ofstream file(this->est_csv_filename.c_str(), std::ios_base::app);
-            // for(int i=0; i<3; i++){
-            //     file <<  this->est_robot_state[6+i]<< ",";
-            // }
-            // for (int i = 0; i < 3; i++)
-            // {
-            //     file <<  this->obs.lin_vel[i]<< ",";
-            // }
-
-            // file <<  est_contact_force[2]<< ",";
-            // file <<  est_contact_force[8]<< ",";
-
-            // file <<  desired_contact[0]<< ",";
-            // file <<  desired_contact[1]<< ",";
-
-            for(int i=0; i<6; i++){
-                file <<  this->est_robot_state[i]<< ",";
-            }
-            for (int i = 0; i < 12; i++)
-            {
-                file <<  this->est_robot_state[12+i]<< ",";
-            }
-            for(int i=0; i<6; i++){
-                file <<  this->est_robot_state[6+i]<< ",";
-            }
-            for (int i = 0; i < 12; i++)
-            {
-                file <<  this->est_robot_state[12+12+i]<< ",";
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                this->obs.est_lin_vel[i] = this->est_robot_state[6+i];
-                // file <<  this->obs.lin_vel[i]<< ",";
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                file <<  this->obs.network_est_lin_vel[i]<< ",";
-            }
-            file <<  est_contact_force[2]<< ",";
-            file <<  est_contact_force[8]<< ",";
-
-            // file <<  desired_contact[0]<< ",";
-            // file <<  desired_contact[1]<< ",";
+            // Prepare current joint states (27 DOFs)
+            const int logged_dofs = this->params.num_of_policy_dofs;
+            vector_t joint_pos = vector_t::Zero(logged_dofs);
+            vector_t joint_vel = vector_t::Zero(logged_dofs);
+            vector_t tau_est = vector_t::Zero(logged_dofs);
             
-            file << std::endl;
+            for(int i = 0; i < logged_dofs; ++i) {
+                joint_pos[i] = this->robot_state.motor_state.q[i];
+                joint_vel[i] = this->robot_state.motor_state.dq[i];
+                tau_est[i] = this->robot_state.motor_state.tau_est[i];
+            }
+            
+            int control_dim = this->params.action_dim;
+            control_dim = std::min(control_dim, static_cast<int>(this->output_dof_pos.size()));
+            control_dim = std::min(control_dim, static_cast<int>(this->obs.dof_pos.size()));
+            control_dim = std::min(control_dim, static_cast<int>(this->obs.dof_vel.size()));
+            control_dim = std::min(control_dim, static_cast<int>(this->params.rl_kp.size()));
+            control_dim = std::min(control_dim, static_cast<int>(this->params.rl_kd.size()));
+            control_dim = std::max(control_dim, 0);
 
-            file.close();
-        }
-#endif
+            vector_t cmd_tau_full = vector_t::Zero(logged_dofs);
+            if (control_dim > 0) {
+                vector_t tau_cmd = this->params.rl_kp.head(control_dim).array() *
+                                   (this->output_dof_pos.segment(0, control_dim) - this->obs.dof_pos.segment(0, control_dim)).array()
+                                   - this->params.rl_kd.head(control_dim).array() *
+                                     this->obs.dof_vel.segment(0, control_dim).array();
+                cmd_tau_full.segment(0, control_dim) = tau_cmd;
+            }
+            
+            // Clip cmd_tau to torque limits before logging (DISABLED - log raw values)
+            // for(int i = 0; i < logged_dofs; ++i) {
+            //     double tau_limit = this->params.torque_limits[i];
+            //     if (cmd_tau_full[i] > tau_limit) cmd_tau_full[i] = tau_limit;
+            //     if (cmd_tau_full[i] < -tau_limit) cmd_tau_full[i] = -tau_limit;
+            // }
+            this->output_dof_tau = cmd_tau_full;
+
+            vector_t cmd_pos_full = vector_t::Zero(logged_dofs);
+            int pos_dim = std::min(static_cast<int>(this->output_dof_pos.size()), logged_dofs);
+            if (pos_dim > 0) {
+                cmd_pos_full.segment(0, pos_dim) = this->output_dof_pos.segment(0, pos_dim);
+            }
+
+            // Get motion phase from active model (cast to AsapModel)
+            float motion_phase = 0.0f;
+            if (this->active_model) {
+                auto asap_model = dynamic_cast<AsapModel*>(this->active_model.get());
+                if (asap_model) {
+                    motion_phase = static_cast<float>(asap_model->get_motion_phase());
+                }
+            }
+            
+            this->CSVLogger(joint_pos, joint_vel, tau_est, cmd_pos_full, cmd_tau_full, motion_phase);
+        
+    }
+
+
 
     this->StateController(&this->robot_state, &this->robot_command);
 
@@ -440,16 +538,6 @@ void RL_Real::RobotControl()
     //     std::cout << "after motor_state.dq[" << i << "] = " << this->robot_state.motor_state.dq[i] << std::endl;
     //     std::cout << "after motor_state.tau_est[" << i << "] = " << this->robot_state.motor_state.tau_est[i] << std::endl;
     // }
-
-#ifdef CSV_LOGGER
-    if(this->rl_init_done)
-    {
-        vector_t tau_est = Eigen::Map<const vector_t>(this->robot_state.motor_state.tau_est.data(),  // 数据指针
-                                                      this->robot_state.motor_state.tau_est.size()   // 向量大小
-        );
-        this->CSVLogger(this->output_dof_tau, tau_est, this->obs.dof_pos, this->output_dof_pos, this->obs.dof_vel);
-    }
-#endif
 
     this->SetCommand(&this->robot_command, &this->robot_state);
 }
@@ -476,11 +564,19 @@ void RL_Real::RunModel()
         this->Forward();
         this->ComputeOutput();
 
+        if (this->auto_log_pending && !this->log_data)
+        {
+            this->CSVInit(this->robot_name);
+            this->log_data = true;
+            this->auto_log_pending = false;
+            std::cout << std::endl << LOGGER::INFO << "RL initialized - Auto data logging ENABLED (500Hz)" << std::endl;
+        }
+
         output_dof_pos_queue.push(this->output_dof_pos);
         output_dof_vel_queue.push(this->output_dof_vel);
         output_dof_tau_queue.push(this->output_dof_tau);
 
-        this->TorqueProtect(this->output_dof_tau);
+        // this->TorqueProtect(this->output_dof_tau);
         // this->AttitudeProtect(this->robot_state.imu.quaternion, 75.0f, 75.0f);
 
 

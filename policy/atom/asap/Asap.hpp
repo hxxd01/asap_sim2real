@@ -43,6 +43,11 @@ public:
         this->motion_phase = 0.0;
     }
     
+    // Get current motion phase (0.0 to 1.0)
+    double get_motion_phase() const {
+        return this->motion_phase;
+    }
+    
     vector_t compute_observation(const ModelParams& params, const RobotState<double>& robot_state, const Control& control, Observations& obs){
 
         for(int i = 0; i < params.num_of_policy_dofs; i++)

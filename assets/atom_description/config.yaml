@@ -9,8 +9,8 @@
 
 #挥手：/home/dobot/Desktop/extracted_files/logs/MotionTracking/gesture_new/exported/model_40000.onnx
 #单跨步 /home/dobot/Desktop/extracted_files/logs/MotionTracking/one_step/exported/model_22000.onnx
-policy_path: "/home/dobot/Desktop/extracted_files/logs/MotionTracking/gesture_new/exported/model_40000.onnx"  # TODO: 替换为实际的 ATOM ONNX 模型路径
-cycle_time: 4.8  # 动作周期时间（秒），根据实际运动调整
+policy_path: "xkc.onnx"  # TODO: 替换为实际的 ATOM ONNX 模型路径
+cycle_time: 8  # 动作周期时间（秒），根据实际运动调整
 #挥手4.8
 #跨步5.333
 xml_path: "atom_urdf/atom_v3.xml"

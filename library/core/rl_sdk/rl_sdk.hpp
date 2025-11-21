@@ -298,7 +298,8 @@ public:
     // csv logger
     std::string csv_filename;
     void CSVInit(std::string robot_name);
-    void CSVLogger(vector_t torque, vector_t tau_est, vector_t joint_pos, vector_t joint_pos_target, vector_t joint_vel);
+    void CSVLogger(vector_t joint_pos, vector_t joint_vel, vector_t tau_est,
+                   vector_t cmd_q, vector_t cmd_tau, float motion_phase);
 
     // control
     Control control;

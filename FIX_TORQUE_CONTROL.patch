@@ -1,0 +1,215 @@
+# 修复真机力矩控制的补丁方案
+
+## 问题分析
+
+### 当前问题
+1. **真机只clip前馈力矩**，总力矩可能超限
+2. **CSV只记录PD项**，缺少tau_forward
+3. **与仿真实现不一致**
+
+### 解决方案
+让真机在上层计算并clip总力矩，然后以纯力矩模式下发（kp=kd=0）
+
+---
+
+## 修复代码
+
+### 方案：纯力矩控制模式
+
+**原理**：
+- 在上层计算总力矩 = tau_forward + PD项
+- Clip总力矩到限制范围
+- 下发总力矩，设置kp=kd=0（避免底层SDK重复计算PD）
+
+**修改 SetCommand**:
+
+```cpp
+void RL_Real::SetCommand(const RobotCommand<double> *command, const RobotState<double> *state)
+{
+    // Send leg commands (12 joints: indices 0-11)
+    for (int i = 0; i < 12; ++i) {
+        // Calculate position and velocity errors
+        double pos_err = command->motor_command.q[i] - state->motor_state.q[i];
+        double vel_err = command->motor_command.dq[i] - state->motor_state.dq[i];
+        
+        // Calculate total torque = tau_forward + PD
+        double u_total = command->motor_command.tau[i] +
+                         command->motor_command.kp[i] * pos_err +
+                         command->motor_command.kd[i] * vel_err;
+        
+        // Clip total torque to limits
+        double tau_limit = this->params.torque_limits[i];
+        if (u_total > tau_limit) u_total = tau_limit;
+        if (u_total < -tau_limit) u_total = -tau_limit;
+        
+        // Send as pure torque control (kp=kd=0 to avoid double PD)
+        this->leg_command.q_ref[i] = command->motor_command.q[i];  // Still set for safety
+        this->leg_command.dq_ref[i] = 0.0;
+        this->leg_command.kp[i] = 0.0;  // Disable SDK's PD
+        this->leg_command.kd[i] = 0.0;  // Disable SDK's PD
+        this->leg_command.tau_forward[i] = u_total;  // Send clipped total torque
+    }
+
+    // Send arm commands (15 joints controlled by policy: indices 12-26)
+    for (int i = 12; i < this->params.num_of_dofs; ++i) {
+        // Calculate position and velocity errors
+        double pos_err = command->motor_command.q[i] - state->motor_state.q[i];
+        double vel_err = command->motor_command.dq[i] - state->motor_state.dq[i];
+        
+        // Calculate total torque = tau_forward + PD
+        double u_total = command->motor_command.tau[i] +
+                         command->motor_command.kp[i] * pos_err +
+                         command->motor_command.kd[i] * vel_err;
+        
+        // Clip total torque to limits
+        double tau_limit = this->params.torque_limits[i];
+        if (u_total > tau_limit) u_total = tau_limit;
+        if (u_total < -tau_limit) u_total = -tau_limit;
+        
+        // Send as pure torque control (kp=kd=0 to avoid double PD)
+        this->arm_command.q_ref[i - 12] = command->motor_command.q[i];
+        this->arm_command.dq_ref[i - 12] = 0.0;
+        this->arm_command.kp[i - 12] = 0.0;  // Disable SDK's PD
+        this->arm_command.kd[i - 12] = 0.0;  // Disable SDK's PD
+        this->arm_command.tau_forward[i - 12] = u_total;  // Send clipped total torque
+    }
+    
+    // Fill head joints (same as before)
+    const int head_start_idx = 15;
+    for (int i = 0; i < 2; ++i) {
+        this->arm_command.q_ref[head_start_idx + i] = 0.0;
+        this->arm_command.dq_ref[head_start_idx + i] = 0.0;
+        this->arm_command.kp[head_start_idx + i] = 50.0;
+        this->arm_command.kd[head_start_idx + i] = 2.0;
+        this->arm_command.tau_forward[head_start_idx + i] = 0.0;
+    }
+    
+    int fsm_id = 2;
+    bridge.SetNewestFsmCommand(fsm_id);
+    bridge.SetNewestLegCommand(this->leg_command);
+
+    HandleArmSwitch();
+    if (!isTeleoperation) {
+        if (arm_init_time < arm_init_duration) {
+            InitializeArmPosition();
+            arm_init_time += this->params.dt;
+        }
+        bridge.SetNewestArmCommand(this->arm_command);
+    } else {
+        arm_init_time = 0;
+    }
+}
+```
+
+---
+
+## 修复CSV记录
+
+### 修改 RobotControl 中的记录部分
+
+```cpp
+// Line 495开始
+// Prepare command torque data
+vector_t tau_forward = vector_t::Zero(logged_dofs);
+vector_t tau_pd = vector_t::Zero(logged_dofs);
+vector_t tau_total_raw = vector_t::Zero(logged_dofs);
+vector_t tau_total_clipped = vector_t::Zero(logged_dofs);
+
+for(int i = 0; i < logged_dofs; ++i) {
+    // tau_forward from command
+    tau_forward[i] = this->robot_command.motor_command.tau[i];
+    
+    // PD term
+    double pos_err = this->output_dof_pos[i] - this->obs.dof_pos[i];
+    double vel_err = 0.0 - this->obs.dof_vel[i];
+    tau_pd[i] = this->params.rl_kp[i] * pos_err + this->params.rl_kd[i] * vel_err;
+    
+    // Total torque (raw)
+    tau_total_raw[i] = tau_forward[i] + tau_pd[i];
+    
+    // Total torque (clipped)
+    tau_total_clipped[i] = tau_total_raw[i];
+    double tau_limit = this->params.torque_limits[i];
+    if (tau_total_clipped[i] > tau_limit) tau_total_clipped[i] = tau_limit;
+    if (tau_total_clipped[i] < -tau_limit) tau_total_clipped[i] = -tau_limit;
+}
+
+// Update CSVLogger to include all torque components
+this->CSVLogger(joint_pos, joint_vel, tau_est, cmd_pos_full, 
+                tau_forward, tau_pd, tau_total_clipped, motion_phase);
+```
+
+### 修改 CSVLogger 函数签名
+
+```cpp
+// In rl_sdk.hpp
+void CSVLogger(vector_t joint_pos, vector_t joint_vel, vector_t tau_est,
+               vector_t cmd_q, vector_t tau_forward, vector_t tau_pd, 
+               vector_t tau_total, float motion_phase);
+```
+
+---
+
+## 注意事项
+
+### ⚠️ 风险评估
+
+1. **改为纯力矩控制后，需要验证稳定性**
+   - 测试时建议逐步增加力矩限制
+   - 先在仿真中验证
+
+2. **检查底层SDK是否支持kp=kd=0**
+   - 有些SDK可能要求kp>0
+   - 如果不支持，需要使用方案B
+
+### 方案B: 混合模式（如果SDK不支持纯力矩）
+
+```cpp
+// 计算总力矩
+double u_total = tau_forward + kp*pos_err + kd*vel_err;
+
+// Clip总力矩
+if (u_total > lim) u_total = lim;
+if (u_total < -lim) u_total = -lim;
+
+// 反算tau_forward，保持PD参数
+double tau_forward_adjusted = u_total - (kp*pos_err + kd*vel_err);
+
+// 下发
+this->leg_command.tau_forward[i] = tau_forward_adjusted;
+this->leg_command.kp[i] = command->motor_command.kp[i];
+this->leg_command.kd[i] = command->motor_command.kd[i];
+```
+
+---
+
+## 验证步骤
+
+1. **仿真验证**: 先在rl_sim中测试纯力矩模式
+2. **真机测试**: 从小力矩限制开始测试
+3. **数据对比**: 对比CSV中tau_est和tau_total_clipped
+4. **性能评估**: 检查是否影响控制效果
+
+---
+
+## CSV新格式
+
+### 新增列
+- `tau_forward_0` ~ `tau_forward_26`: 前馈力矩
+- `tau_pd_0` ~ `tau_pd_26`: PD控制力矩
+- `tau_total_0` ~ `tau_total_26`: 总力矩（clip后，实际下发值）
+- `tau_est_0` ~ `tau_est_26`: 估计力矩（传感器读数）
+
+### 分析价值
+```python
+# 验证力矩限制
+assert all(abs(tau_total) <= tau_limit)
+
+# 对比实际与命令
+tau_error = tau_est - tau_total
+
+# 分析力矩组成
+tau_forward_ratio = tau_forward / tau_total
+tau_pd_ratio = tau_pd / tau_total
+```
+

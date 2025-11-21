@@ -4,7 +4,7 @@
 atom/asap:
 #gst_ref0
 #model_22000
-  model_name: "model_22000.onnx"
+  model_name: "xkc.onnx"
   num_one_step_observations: 88
   num_history: 4
 
@@ -15,8 +15,7 @@ atom/asap:
   num_of_policy_dofs: 27
   action_dim:  27
 
-  motion_time: 5.333
-
+  motion_time: 4.8
 # 'left_hip_pitch_joint', 'right_hip_pitch_joint', 'waist_yaw_joint', 'left_hip_roll_joint', 'right_hip_roll_joint', 
 # 'left_shoulder_pitch_joint', 'right_shoulder_pitch_joint', 'left_hip_yaw_joint', 'right_hip_yaw_joint', 
 # 'left_shoulder_roll_joint', 'right_shoulder_roll_joint', 'left_knee_joint', 'right_knee_joint', 
@@ -26,7 +25,7 @@ atom/asap:
 # 'left_wrist_pitch_joint', 'right_wrist_pitch_joint', 
 # 'left_wrist_yaw_joint', 'right_wrist_yaw_joint'
 
-  rl_kp: [430.24, 278.81, 144.89, 320.80, 60.64, 60.64,  # 左腿6（禁用PD控制）
+  rl_kp: [430.24, 278.81, 144.89, 320.80, 60.64, 60.64,  # 左腿6（禁用PD控制）0
           430.24, 278.81, 144.89, 320.80, 60.64, 60.64, 
           320,  # 腰1
           80, 80, 80, 60, 60, 80, 80,  # 左臂7

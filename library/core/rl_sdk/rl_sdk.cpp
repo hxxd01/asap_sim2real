@@ -135,7 +135,7 @@ void RL::ComputeOutput()
 
     output_dof_vel = 0.0 * this->obs.dof_vel;  // No velocity control in this case
 
-    output_dof_tau = this->params.rl_kp.array() * (output_dof_pos - this->obs.dof_pos.head(this->params.action_dim)).array()  - this->params.rl_kd.array()  * this->obs.dof_vel.head(this->params.action_dim).array()  ;
+    // output_dof_tau = this->params.rl_kp.array() * (output_dof_pos - this->obs.dof_pos.head(this->params.action_dim)).array()  - this->params.rl_kd.array()  * this->obs.dof_vel.head(this->params.action_dim).array()  ;
 }
 
 
@@ -419,11 +419,14 @@ void RL::CSVInit(std::string robot_path)
     csv_filename += ".csv";
     std::ofstream file(csv_filename.c_str());
 
-    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << "tau_cal_" << i << ","; }
-    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << "tau_est_" << i << ","; }
+    // Current state
     for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << "joint_pos_" << i << ","; }
-    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << "joint_pos_target_" << i << ","; }
     for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << "joint_vel_" << i << ","; }
+    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << "tau_est_" << i << ","; }
+    // Commands sent to robot
+    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << "cmd_q_" << i << ","; }
+    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << "cmd_tau_" << i << ","; }
+    file << "motion_phase,";
 
     file << std::endl;
 
@@ -431,15 +434,19 @@ void RL::CSVInit(std::string robot_path)
 }
 
 
-void RL::CSVLogger(vector_t torque, vector_t tau_est, vector_t joint_pos, vector_t joint_pos_target, vector_t joint_vel)
+void RL::CSVLogger(vector_t joint_pos, vector_t joint_vel, vector_t tau_est,
+                   vector_t cmd_q, vector_t cmd_tau, float motion_phase)
 {
     std::ofstream file(csv_filename.c_str(), std::ios_base::app);
 
-    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << torque[i] << ","; }
-    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << tau_est[i] << ","; }
-    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << joint_pos[i]<< ","; }
-    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << joint_pos_target[i] << ","; }
+    // Current state
+    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << joint_pos[i] << ","; }
     for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << joint_vel[i] << ","; }
+    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << tau_est[i] << ","; }
+    // Commands
+    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << cmd_q[i] << ","; }
+    for(int i = 0; i < this->params.num_of_policy_dofs; ++i) { file << cmd_tau[i] << ","; }
+    file << motion_phase << ",";
 
     file << std::endl;
 

@@ -11,6 +11,7 @@
 #include "rl_sdk.hpp"
 #include "loop.hpp"
 #include "fsm.hpp"
+#include "../policy/atom/asap/Asap.hpp"  // Include AsapModel for motion_phase access
 
 #include <csignal>
 #include <cmath>
@@ -84,6 +85,11 @@ private:
     double arm_init_time = 10.0;
     double arm_init_duration = 10.0;
     void InitializeArmPosition();
+
+    // Data logging
+    bool log_data = false;
+    bool prev_rl_init_done = false;
+    bool auto_log_pending = false;
 
     // std::chrono::steady_clock::time_point last_loop_end;  // 记录上次循环结束时间
     // bool first_loop = true;                               // 首次循环标志

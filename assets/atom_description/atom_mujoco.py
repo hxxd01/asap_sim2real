@@ -468,8 +468,7 @@ def run_and_save_mujoco(cfg, save_path):
             data.qvel[:] = 0.0
         except Exception:
             pass
-        # 使用 mj_forward 而不是 mj_step，只计算正运动学，不积分物理
-        mujoco.mj_forward(model, data)
+        mujoco.mj_step(model, data)
 
         # 初始化
         model.opt.timestep = cfg.simulation_dt
