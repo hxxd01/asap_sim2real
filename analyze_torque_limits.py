@@ -171,7 +171,7 @@ def analyze_torque_limits(csv_file, torque_limits):
     print("\n" + "="*80)
 
 if __name__ == "__main__":
-    csv_file = "/home/dobot/Desktop/rl_deploy-develop-asap1/policy/atom/motor_20251120191132.csv"
+    csv_file = "/home/dobot/Desktop/rl_deploy-develop-asap1/policy/atom/motor_20251121190310.csv"
     
     if not Path(csv_file).exists():
         print(f"错误: 文件不存在: {csv_file}")

@@ -4,7 +4,7 @@
 atom/asap:
 #gst_ref0
 #model_22000
-  model_name: "xkc.onnx"
+  model_name: "model_21000.onnx"
   num_one_step_observations: 88
   num_history: 4
 

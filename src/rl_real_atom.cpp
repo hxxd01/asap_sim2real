@@ -330,8 +330,8 @@ void RL_Real::SetCommand(const RobotCommand<double> *command, const RobotState<d
     for (int i = 0; i < 2; ++i) {
         this->arm_command.q_ref[head_start_idx + i] = 0.0;  // Keep current position
         this->arm_command.dq_ref[head_start_idx + i] = 0.0;
-        this->arm_command.kp[head_start_idx + i] = 50.0;  // Moderate stiffness
-        this->arm_command.kd[head_start_idx + i] = 2.0;
+        this->arm_command.kp[head_start_idx + i] = 100.0;  // Moderate stiffness
+        this->arm_command.kd[head_start_idx + i] = 4.0;
         this->arm_command.tau_forward[head_start_idx + i] = 0.0;
     }
     
