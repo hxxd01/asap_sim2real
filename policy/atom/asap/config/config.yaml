@@ -4,7 +4,7 @@
 atom/asap:
 #gst_ref0
 #model_22000
-  model_name: "model_21000.onnx"
+  model_name: "1126_3.onnx"
   num_one_step_observations: 88
   num_history: 4
 
@@ -85,6 +85,44 @@ atom/asap:
       0.1062,  # 25: right_wrist_pitch_joint
       0.1062   # 26: right_wrist_yaw_joint
     ]
+  # action_scale: [
+  #     # 左腿 (6 DOF)
+  #     0.1886,  # 0: left_hip_pitch_joint
+  #     0.3382,  # 1: left_hip_roll_joint
+  #     0.2808,  # 2: left_hip_yaw_joint
+  #     0.2603,  # 3: left_knee_joint
+  #     0.5791,  # 4: left_ankle_pitch_joint
+  #     0.5791,  # 5: left_ankle_roll_joint
+
+  #     # 右腿 (6 DOF)
+  #     0.1886,  # 6: right_hip_pitch_joint
+  #     0.3382,  # 7: right_hip_roll_joint
+  #     0.2808,  # 8: right_hip_yaw_joint
+  #     0.2603,  # 9: right_knee_joint
+  #     0.5791,  # 10: right_ankle_pitch_joint
+  #     0.5791,  # 11: right_ankle_roll_joint
+
+  #     # 腰部 (1 DOF)
+  #     0.1605,  # 12: waist_yaw_joint
+
+  #     # 左臂 (7 DOF)
+  #     0.1049,  # 13: left_shoulder_pitch_joint
+  #     0.2052,  # 14: left_shoulder_roll_joint
+  #     0.2052,  # 15: left_shoulder_yaw_joint
+  #     0.2052,  # 16: left_elbow_pitch_joint
+  #     0.3277,  # 17: left_elbow_roll_joint
+  #     0.3277,  # 18: left_wrist_pitch_joint
+  #     0.3277,  # 19: left_wrist_yaw_joint
+
+  #     # 右臂 (7 DOF)
+  #     0.1049,  # 20: right_shoulder_pitch_joint
+  #     0.2052,  # 21: right_shoulder_roll_joint
+  #     0.2052,  # 22: right_shoulder_yaw_joint
+  #     0.2052,  # 23: right_elbow_pitch_joint
+  #     0.3277,  # 24: right_elbow_roll_joint
+  #     0.3277,  # 25: right_wrist_pitch_joint
+  #     0.3277   # 26: right_wrist_yaw_joint
+  #   ]
 
   lin_vel_scale: 1.0
   ang_vel_scale: 0.25
@@ -110,11 +148,18 @@ atom/asap:
   #                   0.0,
   #                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   #                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-  torque_limits: [280.0, 308.0, 140.0, 360.0, 130.0, 130.0,
-                  280.0, 308.0, 140.0, 360.0, 130.0, 130.0,
-                  250.0,
-                  56.0, 36.0, 36.0, 36.0, 18.6, 18.6, 18.6,
-                  56.0, 36.0, 36.0, 36.0, 18.6, 18.6, 18.6]
+  torque_limits: [
+      # 左腿 6
+      207.76, 241.42, 104.16, 213.80, 89.90, 89.90,
+      # 右腿 6
+      207.76, 241.42, 104.16, 213.80, 89.90, 89.90,
+      # 腰 1
+      182.28,
+      # 左臂 7
+      93.00, 70.0, 70.0, 70.0, 34.0, 34.0, 34.0,
+      # 右臂 7
+      93.0, 70.0, 70.0, 70.0, 34.0, 34.0, 34.0
+  ]
 
 #   joint_names: [left_hip_pitch_joint, left_hip_roll_joint, left_hip_yaw_joint, left_knee_joint, left_ankle_pitch_joint, left_ankle_roll_joint,
 #                 right_hip_pitch_joint, right_hip_roll_joint, right_hip_yaw_joint, right_knee_joint, right_ankle_pitch_joint, right_ankle_roll_joint,

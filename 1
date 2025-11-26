@@ -1,0 +1,16 @@
+python visualize_csv.py policy/atom/motor_20251121190310.csv --duration 10
+
+# 2. 只看前5秒数据 + 按身体部位分组
+python visualize_csv.py policy/atom/motor_20251121190310.csv --duration 5 --group-by-body
+
+# 3. 看2秒到12秒之间的数据
+python visualize_csv.py policy/atom/motor_20251121190310.csv --start 2 --end 12
+
+# 4. 从5秒开始，显示8秒数据（即5秒到13秒）
+python visualize_csv.py policy/atom/motor_20251121190310.csv --start 5 --duration 8
+
+# 5. 跳过前3秒，显示剩余所有数据
+python visualize_csv.py policy/atom/motor_20251121190310.csv --start 3
+
+# 6. 只看前15秒 + 分组 + 保存图片
+python visualize_csv.py policy/atom/motor_20251121190310.csv --duration 15 --group-by-body --save

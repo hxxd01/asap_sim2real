@@ -9,15 +9,19 @@ import yaml
 import sys
 from pathlib import Path
 
-# 力矩限制（从config.yaml）
-torque_limits = [
-    280.0, 308.0, 140.0, 360.0, 130.0, 130.0,  # 0-5: 左腿
-    280.0, 308.0, 140.0, 360.0, 130.0, 130.0,  # 6-11: 右腿
-    250.0,  # 12: 腰部
-    56.0, 36.0, 36.0, 36.0, 18.6, 18.6, 18.6,  # 13-19: 左臂
-    56.0, 36.0, 36.0, 36.0, 18.6, 18.6, 18.6,  # 20-26: 右臂
-]
 
+
+torque_limits = [
+    207.76, 241.42, 104.16, 213.80, 89.90, 89.90,
+    # 右腿 6
+    207.76, 241.42, 104.16, 213.80, 89.90, 89.90,
+    # 腰 1
+    182.28,
+    # 左臂 7
+    93.00, 70.0, 70.0, 70.0, 34.0, 34.0, 34.0,
+    # 右臂 7
+    93.0, 70.0, 70.0, 70.0, 34.0, 34.0, 34.0
+]
 def analyze_torque_limits(csv_file, torque_limits):
     """分析力矩是否超限"""
     print(f"正在读取CSV文件: {csv_file}")
@@ -171,7 +175,7 @@ def analyze_torque_limits(csv_file, torque_limits):
     print("\n" + "="*80)
 
 if __name__ == "__main__":
-    csv_file = "/home/dobot/Desktop/rl_deploy-develop-asap1/policy/atom/motor_20251121190310.csv"
+    csv_file = "/home/dobot/Desktop/rl_deploy-develop-asap1/policy/atom/motor_20251126113022.csv"
     
     if not Path(csv_file).exists():
         print(f"错误: 文件不存在: {csv_file}")

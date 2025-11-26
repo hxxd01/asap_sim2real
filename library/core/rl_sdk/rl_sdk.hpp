@@ -160,6 +160,8 @@ struct ModelParams
     vector_t fixed_kd;
     vector_t commands_scale;
     vector_t default_dof_pos;
+    vector_t dof_pos_lower_limits;
+    vector_t dof_pos_upper_limits;
     std::vector<std::string> joint_names;
     std::vector<int> joint_mapping;
 
@@ -184,6 +186,8 @@ inline std::ostream& operator<<(std::ostream& os, const ModelParams& params) {
     print_vector(params.fixed_kd, "fixed_kd");
     print_vector(params.torque_limits, "torque_limits");
     print_vector(params.default_dof_pos, "default_dof_pos");
+    print_vector(params.dof_pos_lower_limits, "dof_pos_lower_limits");
+    print_vector(params.dof_pos_upper_limits, "dof_pos_upper_limits");
 
     print_vector(params.joint_names, "joint_names");
     print_vector(params.joint_mapping, "joint_mapping");

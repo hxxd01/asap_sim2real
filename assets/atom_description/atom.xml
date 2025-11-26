@@ -181,7 +181,7 @@
                                     <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="right_wrist_pitch_link" />
                                     <body name="right_wrist_yaw_link" pos="0.085 0 0">
                                         <inertial pos="0.029 -0.0004 0.001" quat="0.707107 0 0 0.707107" mass="0.334" diaginertia="0.0004 0.0003 0.0003" />
-                                        <joint name="right_wrist_yaw_joint" pos="0 0 0" axis="0 0 1" limited="true" range="-1.57 1.57" actuatorfrcrange="-18.6 18.6" damping="0.001" frictionloss="0.1" />
+                                        <joint name="right_wrist_yaw_joint" pos="0 0 0" axis="0 0 1" limited="true" range="-1.57 1.57" actuatorfrcrange="-34 34" damping="0.001" frictionloss="0.1" />
                                         <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" mesh="right_wrist_yaw_link" />
                                     </body>
                                 </body>

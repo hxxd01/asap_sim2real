@@ -133,6 +133,16 @@ void RL::ComputeOutput()
     vector_t actions_scaled = this->obs.actions.array() * this->params.action_scale.array();
     output_dof_pos = actions_scaled + this->params.default_dof_pos.head(this->params.action_dim);
 
+    // Clip output_dof_pos to joint limits
+    for (int i = 0; i < this->params.action_dim; ++i) {
+        if (output_dof_pos[i] < this->params.dof_pos_lower_limits[i]) {
+            output_dof_pos[i] = this->params.dof_pos_lower_limits[i];
+        }
+        if (output_dof_pos[i] > this->params.dof_pos_upper_limits[i]) {
+            output_dof_pos[i] = this->params.dof_pos_upper_limits[i];
+        }
+    }
+
     output_dof_vel = 0.0 * this->obs.dof_vel;  // No velocity control in this case
 
     // output_dof_tau = this->params.rl_kp.array() * (output_dof_pos - this->obs.dof_pos.head(this->params.action_dim)).array()  - this->params.rl_kd.array()  * this->obs.dof_vel.head(this->params.action_dim).array()  ;
@@ -339,6 +349,8 @@ void RL::ReadYamlBase(std::string robot_path)
     this->params.fixed_kd = load_eigen_vector(config["fixed_kd"], "fixed_kd");
     this->params.torque_limits = load_eigen_vector(config["torque_limits"], "torque_limits");
     this->params.default_dof_pos = load_eigen_vector(config["default_dof_pos"], "default_dof_pos");
+    this->params.dof_pos_lower_limits = load_eigen_vector(config["dof_pos_lower_limits"], "dof_pos_lower_limits");
+    this->params.dof_pos_upper_limits = load_eigen_vector(config["dof_pos_upper_limits"], "dof_pos_upper_limits");
 
     this->params.joint_names = ReadVectorFromYaml<std::string>(config["joint_names"]);
     this->params.joint_mapping = ReadVectorFromYaml<int>(config["joint_mapping"]);
