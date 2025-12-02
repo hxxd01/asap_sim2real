@@ -4,7 +4,7 @@
 atom/asap:
 #gst_ref0
 #model_22000
-  model_name: "onestep_pd_new_1202_1.onnx"
+  model_name: "1202_1_pd3.onnx"
   num_one_step_observations: 88
   num_history: 4
 
