@@ -80,7 +80,7 @@ RL_Sim::RL_Sim(std::string robot_name){
 
             this->mj_data->qpos[0] = 0.0;
             this->mj_data->qpos[1] = 0.0;
-            this->mj_data->qpos[2] = 0.95;
+            this->mj_data->qpos[2] = 0.976;
             this->mj_data->qpos[3] = 1.0;
             this->mj_data->qpos[4] = 0.0;
             this->mj_data->qpos[5] = 0.0;
@@ -295,7 +295,7 @@ void RL_Sim::SetDefaultPosition()
         
         this->mj_data->qpos[0] = 0.0;
         this->mj_data->qpos[1] = 0.0;
-        this->mj_data->qpos[2] = 0.95;
+        this->mj_data->qpos[2] = 0.976;
         this->mj_data->qpos[3] = 1.0;
         this->mj_data->qpos[4] = 0.0;
         this->mj_data->qpos[5] = 0.0;
@@ -325,7 +325,7 @@ void RL_Sim::SetDefaultPosition()
 
         this->mj_data->qpos[0] = 0.0;
         this->mj_data->qpos[1] = 0.0;
-        this->mj_data->qpos[2] = 0.95;
+        this->mj_data->qpos[2] = 0.976;
         this->mj_data->qpos[3] = 1.0;
         this->mj_data->qpos[4] = 0.0;
         this->mj_data->qpos[5] = 0.0;
@@ -368,7 +368,7 @@ void RL_Sim::RobotControl()
                 
                 this->mj_data->qpos[0] = 0.0;
                 this->mj_data->qpos[1] = 0.0;
-                this->mj_data->qpos[2] = 0.95;
+                this->mj_data->qpos[2] = 0.976;
                 this->mj_data->qpos[3] = 1.0;
                 this->mj_data->qpos[4] = 0.0;
                 this->mj_data->qpos[5] = 0.0;
@@ -393,7 +393,7 @@ void RL_Sim::RobotControl()
                 
                 this->mj_data->qpos[0] = 0.0;
                 this->mj_data->qpos[1] = 0.0;
-                this->mj_data->qpos[2] = 0.95;
+                this->mj_data->qpos[2] = 0.976;
                 this->mj_data->qpos[3] = 1.0;
                 this->mj_data->qpos[4] = 0.0;
                 this->mj_data->qpos[5] = 0.0;
