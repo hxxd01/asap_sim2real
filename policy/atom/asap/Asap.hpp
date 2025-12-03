@@ -79,8 +79,8 @@ public:
 
       
         double raw_phase = params.dt * params.decimation * static_cast<double>(this->counter_step + 1) / params.motion_time;
-        this->motion_phase = std::fmod(raw_phase, 1.0);  // ✅ 使用取模，让相位在 0-1 之间循环
-
+        //this->motion_phase = std::fmod(raw_phase, 1.0);  // ✅ 使用取模，让相位在 0-1 之间循环
+        this->motion_phase = std::clamp(raw_phase, 0.0, 0.98);
         // 首次执行时打印完整参数
         static bool first_run = true;
         if (first_run) {
