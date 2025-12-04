@@ -6,6 +6,14 @@ atom/asap:
 #model_22000
 #挥手最好"1203_gst_2.onnx"
   model_name: "model_76000.onnx"
+  
+    # 轨迹采集配置
+  enable_trajectory_collection: true  # 是否启用自动轨迹采集（按2进入RL时自动开始）
+  max_episode_steps:  800               # 每个episode最大步数
+  max_total_steps: 20000               # 总采集步数
+  termination_gravity_threshold: 0.85  # 重力倾斜阈值
+  termination_min_height: 0.35         # 最小高度(m)
+  termination_torque_factor: 3.0       # 力矩倍数
   num_one_step_observations: 88
   num_history: 4
 
@@ -78,7 +86,63 @@ atom/asap:
   #     0.3400,  # 25: right_wrist_pitch_joint
   #     0.3400   # 26: right_wrist_yaw_joint
   #   ]
-  # 上肢新，下肢6hz
+  #下肢8hz，上肢新
+  # rl_kp: [
+  #   275.35, 178.44, 92.73, 205.31, 38.81, 38.81,  # 左腿
+  #   275.35, 178.44, 92.73, 205.31, 38.81, 38.81,  # 右腿
+  #   283.98,  # 腰部
+  #   221, 85, 85, 85, 25, 25, 25,  # 左臂
+  #   221, 85, 85, 85, 25, 25, 25,  # 右臂
+  #   ]
+
+  # rl_kd: [
+  #   10.96, 7.10, 3.69, 8.17, 1.54, 1.54,  # 左腿
+  #   10.96, 7.10, 3.69, 8.17, 1.54, 1.54,  # 右腿
+  #   11.30,  # 腰部
+  #   45, 18, 18, 18, 5, 5, 5,  # 左臂
+  #   45, 18, 18, 18, 5, 5, 5,  # 右臂
+  #   ]
+
+  #   # 更新后的 action_scale
+  # action_scale: [
+  #   # 左腿 (6 DOF)
+  #   0.1886,  # 0: left_hip_pitch_joint
+  #   0.3382,  # 1: left_hip_roll_joint
+  #   0.2808,  # 2: left_hip_yaw_joint
+  #   0.2603,  # 3: left_knee_joint
+  #   0.5791,  # 4: left_ankle_pitch_joint
+  #   0.5791,  # 5: left_ankle_roll_joint
+
+  #   # 右腿 (6 DOF)
+  #   0.1886,  # 6: right_hip_pitch_joint
+  #   0.3382,  # 7: right_hip_roll_joint
+  #   0.2808,  # 8: right_hip_yaw_joint
+  #   0.2603,  # 9: right_knee_joint
+  #   0.5791,  # 10: right_ankle_pitch_joint
+  #   0.5791,  # 11: right_ankle_roll_joint
+
+  #   # 腰部 (1 DOF)
+  #   0.1605,  # 12: waist_yaw_joint
+
+  #   # 左臂 (7 DOF)
+  #   0.1052,  # 13: left_shoulder_pitch_joint
+  #   0.2059,  # 14: left_shoulder_roll_joint
+  #   0.2059,  # 15: left_shoulder_yaw_joint
+  #   0.2059,  # 16: left_elbow_pitch_joint
+  #   0.3400,  # 17: left_elbow_roll_joint
+  #   0.3400,  # 18: left_wrist_pitch_joint
+  #   0.3400,  # 19: left_wrist_yaw_joint
+
+  #   # 右臂 (7 DOF)
+  #   0.1052,  # 20: right_shoulder_pitch_joint
+  #   0.2059,  # 21: right_shoulder_roll_joint
+  #   0.2059,  # 22: right_shoulder_yaw_joint
+  #   0.2059,  # 23: right_elbow_pitch_joint
+  #   0.3400,  # 24: right_elbow_roll_joint
+  #   0.3400,  # 25: right_wrist_pitch_joint
+  #   0.3400   # 26: right_wrist_yaw_joint
+  # ]
+  #上肢新，下肢6hz
   rl_kp: [348.49, 225.83, 117.35, 259.84, 49.11, 49.11,
           348.49, 225.83, 117.35, 259.84, 49.11, 49.11,
           359.40,

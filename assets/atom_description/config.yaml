@@ -103,17 +103,18 @@ action_scale: [
 # 初始姿态配置（27 DOF，按顺序）
 # ========================================
 # 顺序：左腿6 + 右腿6 + 腰1 + 左臂7 + 右臂7
+# 与 policy/atom/asap/config/config.yaml 保持一致（模型训练时使用的default pose）
 default_dof_pos: [
     # 左腿 6：hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    -0.1, 0.0, 0.0, 0.4, -0.3, 0.0,
     # 右腿 6
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    -0.1, 0.0, 0.0, 0.4, -0.3, 0.0,
     # 腰 1：waist_yaw
     0.0,
     # 左臂 7：shoulder_pitch, shoulder_roll, shoulder_yaw, elbow_pitch, elbow_roll, wrist_pitch, wrist_yaw
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.3, -0.9, 1.3, -0.2, 0.0, 0.0,
     # 右臂 7
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    0.0, -0.3, 0.9, 1.3, 0.2, 0.0, 0.0
 ]
 
 init_pos: [

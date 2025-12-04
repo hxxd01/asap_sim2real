@@ -295,6 +295,10 @@ public:
     
     // 设置机器人到默认位置（用于进入RL策略时）
     virtual void SetDefaultPosition() {}
+    
+    // 当FSM进入RL状态时调用（用于自动采集等功能）
+    virtual void OnEnterRLState() {}
+    
     // yaml params
     void ReadYamlBase(std::string robot_name);
     void ReadYamlRL(std::string robot_name);

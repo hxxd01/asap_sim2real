@@ -29,17 +29,18 @@ private:
 
 
     Ort::MemoryInfo memoryInfo; 
-    int counter_step;
     double motion_phase;
 
 public:
+    std::atomic<int> counter_step;  // ✅ 原子类型，线程安全（PhysicsLoop线程递增，RunModel线程读取）
+    
     AsapModel(): memoryInfo(Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault)){
-        this->counter_step = 0;
+        this->counter_step.store(0);  // 原子类型使用store初始化
     }
     
     // 重置策略状态（用于 Reset）
     void reset() {
-        this->counter_step = 0;
+        this->counter_step.store(0);  // 原子类型使用store
         this->motion_phase = 0.0;
     }
     
@@ -78,9 +79,16 @@ public:
         }
 
       
-        double raw_phase = params.dt * params.decimation * static_cast<double>(this->counter_step + 1) / params.motion_time;
-        //this->motion_phase = std::fmod(raw_phase, 1.0);  // ✅ 使用取模，让相位在 0-1 之间循环
-        this->motion_phase = std::clamp(raw_phase, 0.0, 0.98);
+        // ✅ 完全匹配 Python 的 phase 计算逻辑
+        // Python: ref_motion_phase = ((counter) * cfg.simulation_dt / cfg.cycle_time) % 1.0
+        //   counter: 每个控制步递增 (50Hz), simulation_dt=0.02(dt*decimation), cycle_time=15.45
+        // C++: motion_phase = (counter_step * dt * decimation / motion_time) % 1.0
+        //   counter_step: 每个Forward递增 (50Hz), dt*decimation=0.02, motion_time=15.45
+        int current_counter = this->counter_step.load();  // 原子读取
+        double control_period = params.dt * params.decimation;  // 0.02s (50Hz)
+        double raw_phase = control_period * static_cast<double>(current_counter) / params.motion_time;
+        this->motion_phase = std::fmod(raw_phase, 1.0);
+     
         // 首次执行时打印完整参数
         static bool first_run = true;
         if (first_run) {
@@ -100,8 +108,8 @@ public:
             first_run = false;
         }
        
-        if (this->counter_step % 100 == 0) {
-            std::cout << "\n[Phase Debug] counter_step=" << this->counter_step 
+        if (current_counter % 100 == 0) {
+            std::cout << "\n[Phase Debug] counter_step=" << current_counter 
                       << ", motion_phase=" << this->motion_phase
                       << ", dt*decimation=" << (params.dt * params.decimation)
                       << ", motion_time=" << params.motion_time << std::endl;
@@ -114,7 +122,7 @@ public:
         vector_t projectedGravity = QuatRotateInverse(obs.base_quat, obs.gravity_vec);
         
         // 🔍 Debug: 打印projected gravity计算
-        if (this->counter_step < 5) {
+        if (current_counter < 5) {
             std::cout << "  projected_gravity: " << projectedGravity[0] << ", " 
                       << projectedGravity[1] << ", " << projectedGravity[2] << std::endl;
             std::cout << "  deltaJointPos[0-2]: " << deltaJointPos[0] << ", " 
@@ -131,12 +139,18 @@ public:
             projectedGravity * gvec_scale, 
             this->motion_phase * refmotion_scale;  
 
-        // update motion phase
-        this-> counter_step += 1;
+        // ✅ counter_step 在 SetCommand 中递增（每个物理步），不在这里递增
+        // 只在这里打印debug信息
+        if (current_counter <= 50 || current_counter % 200 == 0) {
+            std::cout << "  Observation built with last_action[0:3]=(" 
+                      << obs.actions[0] << ", " << obs.actions[1] << ", " << obs.actions[2] << ")" << std::endl;
+        }
         return proprioObs;
     }
 
     void Forward(const ModelParams& params, OnnxTensor& onnx_tensor, Observations& obs){
+        // ✅ 递增计数器（每次policy forward时递增）
+        this->counter_step.fetch_add(1, std::memory_order_relaxed);
         
         // create input tensor object
         std::vector<Ort::Value> inputValues;

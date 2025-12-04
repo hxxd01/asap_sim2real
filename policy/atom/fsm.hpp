@@ -176,6 +176,9 @@ public:
             
             // ✅ 位置设置完成后再启用 RL 控制
             rl.rl_init_done = true;
+            
+            // ✅ 通知RL控制器已进入运行状态（用于自动采集等）
+            rl.OnEnterRLState();
         }
         catch (const std::exception& e)
         {
@@ -271,6 +274,9 @@ public:
             
             // ✅ 位置设置完成后再启用 RL 控制
             rl.rl_init_done = true;
+            
+            // ✅ 通知RL控制器已进入运行状态（用于自动采集等）
+            rl.OnEnterRLState();
         }
         catch (const std::exception& e)
         {
