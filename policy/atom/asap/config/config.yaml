@@ -5,7 +5,7 @@ atom/asap:
 #gst_ref0
 #model_22000
 #挥手最好"1203_gst_2.onnx"
-  model_name: "1203_walk2_pdnew2.onnx"
+  model_name: "model_76000.onnx"
   num_one_step_observations: 88
   num_history: 4
 
